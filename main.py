@@ -52,7 +52,7 @@ def build_pass_payload(data: Dict[str, Any], banner_data_uri: str) -> Dict[str, 
         "stripURL": banner_data_uri,
         "primaryFields": [
             {
-                "label": "USER",
+                "label": "",
                 "value": f"@{username}"
             }
         ],
@@ -92,7 +92,7 @@ def build_pass_payload(data: Dict[str, Any], banner_data_uri: str) -> Dict[str, 
         ],
         "barcodeValue": f"https://github.com/{username}",
         "barcodeFormat": "QR",
-        "barcodeAltText": "Scan to view GitHub profile",
+        "barcodeAltText": "",
         "sharingProhibited": False
     }
 

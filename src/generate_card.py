@@ -1,28 +1,25 @@
 """
-Module for generating a sleek 1080x360 PNG banner for Apple Wallet (storeCard stripURL).
-Matches GitHub's official dark mode contribution graph.
+High-resolution supersampled renderer for GitHub contribution heatmap.
+Renders at 2x and downsamples with Lanczos for ultra-crisp retina display on iOS.
+No borders, no fake card frames, no burned-in username.
 """
 import io
 import base64
 import os
-from datetime import datetime, date
+from datetime import datetime
 from typing import Dict, List, Any
 from PIL import Image, ImageDraw, ImageFont
 
-# Color palette: GitHub Dark Mode
-BG_COLOR = (13, 17, 23)        # #0d1117
-CARD_BG = (22, 27, 34)         # #161b22
-CARD_BORDER = (48, 54, 61)     # #30363d
-TEXT_WHITE = (240, 246, 252)   # #f0f6fc
-TEXT_MUTED = (139, 148, 158)   # #8b949e
-TEXT_GREEN = (57, 211, 83)     # #39d353
+# Canonical GitHub Dark Mode Colors
+BG_COLOR = (13, 17, 23, 255)       # #0d1117 (seamless pass background)
+TEXT_MUTED = (139, 148, 158, 255)   # #8b949e
 
 LEVEL_COLORS = [
-    (22, 27, 34),     # Level 0: #161b22
-    (14, 68, 41),     # Level 1: #0e4429
-    (0, 109, 50),     # Level 2: #006d32
-    (38, 166, 65),    # Level 3: #26a641
-    (57, 211, 83),    # Level 4: #39d353
+    (22, 27, 34, 255),     # Level 0: #161b22
+    (14, 68, 41, 255),     # Level 1: #0e4429
+    (0, 109, 50, 255),     # Level 2: #006d32
+    (38, 166, 65, 255),    # Level 3: #26a641
+    (57, 211, 83, 255),    # Level 4: #39d353
 ]
 
 def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
@@ -30,6 +27,7 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     if bold:
         font_candidates = [
             "C:/Windows/Fonts/segoeuib.ttf",
+            "C:/Windows/Fonts/sf-pro-display_bold.ttf",
             "C:/Windows/Fonts/arialbd.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
@@ -39,6 +37,7 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     else:
         font_candidates = [
             "C:/Windows/Fonts/segoeui.ttf",
+            "C:/Windows/Fonts/sf-pro-display_regular.ttf",
             "C:/Windows/Fonts/arial.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -52,7 +51,6 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
                 return ImageFont.truetype(path, size)
             except Exception:
                 continue
-        # Also try loading by name
         try:
             return ImageFont.truetype(path, size)
         except Exception:
@@ -66,64 +64,29 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 def generate_banner_image(data: Dict[str, Any], output_path: str = None) -> str:
     """
     Renders 1080x360 px image of GitHub contribution calendar.
-    Returns data URI string: data:image/png;base64,...
+    Uses 2x supersampling (2160x720) for crystal clear retina rendering.
     """
-    width = 1080
-    height = 360
-    img = Image.new("RGBA", (width, height), BG_COLOR)
-    draw = ImageDraw.Draw(img)
+    SCALE = 2
+    w_2x = 1080 * SCALE
+    h_2x = 360 * SCALE
 
-    # Outer decorative card panel
-    panel_margin_x = 24
-    panel_margin_y = 20
-    draw.rounded_rectangle(
-        [panel_margin_x, panel_margin_y, width - panel_margin_x, height - panel_margin_y],
-        radius=16,
-        fill=(18, 22, 28),
-        outline=CARD_BORDER,
-        width=2
-    )
+    img_2x = Image.new("RGBA", (w_2x, h_2x), BG_COLOR)
+    draw = ImageDraw.Draw(img_2x)
 
-    # Header fonts
-    font_title = get_font(26, bold=True)
-    font_sub = get_font(20, bold=False)
-    font_small = get_font(15, bold=False)
-    font_legend = get_font(13, bold=False)
+    font_month = get_font(13 * SCALE, bold=False)
+    font_day = get_font(12 * SCALE, bold=False)
+    font_legend = get_font(12 * SCALE, bold=False)
 
-    # Header text
-    username = data.get("username", "developer")
-    total_commits = data.get("total_last_year", 0)
-    current_streak = data.get("current_streak", 0)
-    
-    # Left Header: "@username • Contributions"
-    title_text = f"@{username}"
-    draw.text((48, 40), title_text, font=font_title, fill=TEXT_WHITE)
-    
-    title_bbox = draw.textbbox((48, 40), title_text, font=font_title)
-    sub_x = title_bbox[2] + 12
-    draw.text((sub_x, 44), "•  Contribution Heatmap", font=font_sub, fill=TEXT_MUTED)
-
-    # Right Header: Streak badge
-    streak_text = f"🔥 {current_streak} Day Streak" if current_streak > 0 else f"{total_commits} in past year"
-    streak_bbox = draw.textbbox((0, 0), streak_text, font=font_sub)
-    streak_w = streak_bbox[2] - streak_bbox[0]
-    streak_x = width - panel_margin_x - 32 - streak_w
-    draw.text((streak_x, 44), streak_text, font=font_sub, fill=TEXT_GREEN if current_streak > 0 else TEXT_WHITE)
-
-    # Prepare 52-53 weeks of data
     days = data.get("days", [])
     if len(days) > 371:
-        # Keep last 53 weeks (53 * 7 = 371 days)
         days = days[-371:]
 
     # Organize days into columns (weeks of 7 days: Sun=0 to Sat=6)
-    # Each column has up to 7 items
     weeks: List[List[Dict[str, Any]]] = []
     current_week = []
-    
     for d in days:
         dt = datetime.strptime(d["date"], "%Y-%m-%d")
-        weekday = (dt.weekday() + 1) % 7 # Python Monday=0, we want Sunday=0
+        weekday = (dt.weekday() + 1) % 7  # Sun=0, Mon=1, ..., Sat=6
         if weekday == 0 and current_week:
             weeks.append(current_week)
             current_week = []
@@ -131,91 +94,90 @@ def generate_banner_image(data: Dict[str, Any], output_path: str = None) -> str:
     if current_week:
         weeks.append(current_week)
 
-    # Ensure max 53 weeks for display
-    if len(weeks) > 53:
-        weeks = weeks[-53:]
+    # Display exactly 52 weeks
+    if len(weeks) > 52:
+        weeks = weeks[-52:]
 
-    # Grid geometry
-    cell_size = 12
-    gap = 4
-    col_width = cell_size + gap
-    grid_start_x = 76
-    grid_start_y = 114
+    num_weeks = len(weeks)
 
-    # Day labels on the left (Mon, Wed, Fri)
+    # Geometry at 2x
+    # Target 52 cols in ~1000px: cell = 15px, gap = 4px -> 52 * 19 = 988px
+    cell_size = 14 * SCALE
+    gap = 4 * SCALE
+    col_pitch = cell_size + gap
+
+    total_grid_w = num_weeks * col_pitch - gap
+    grid_start_x = (w_2x - total_grid_w) // 2 + (15 * SCALE)  # leave room for Mon/Wed/Fri labels on left
+    grid_start_y = 90 * SCALE
+
+    # Day labels on the left (Mon=1, Wed=3, Fri=5)
     day_labels = [("Mon", 1), ("Wed", 3), ("Fri", 5)]
     for label, row_idx in day_labels:
-        y_pos = grid_start_y + row_idx * (cell_size + gap) - 2
-        draw.text((44, y_pos), label, font=font_legend, fill=TEXT_MUTED)
+        y_pos = grid_start_y + row_idx * col_pitch + (2 * SCALE)
+        draw.text((grid_start_x - (28 * SCALE), y_pos), label, font=font_day, fill=TEXT_MUTED)
 
-    # Draw month labels along the top
+    # Month labels along the top
     months_drawn = set()
     for col_idx, week in enumerate(weeks):
         for d in week:
             dt = datetime.strptime(d["date"], "%Y-%m-%d")
-            # If 1st day of month or first week
             m_key = dt.strftime("%Y-%m")
             if dt.day <= 7 and m_key not in months_drawn:
                 months_drawn.add(m_key)
                 m_label = dt.strftime("%b")
-                col_x = grid_start_x + col_idx * col_width
-                draw.text((col_x, grid_start_y - 22), m_label, font=font_legend, fill=TEXT_MUTED)
+                col_x = grid_start_x + col_idx * col_pitch
+                draw.text((col_x, grid_start_y - (24 * SCALE)), m_label, font=font_month, fill=TEXT_MUTED)
                 break
 
     # Draw cells
+    corner_radius = 2.5 * SCALE
     for col_idx, week in enumerate(weeks):
-        col_x = grid_start_x + col_idx * col_width
+        col_x = grid_start_x + col_idx * col_pitch
         for d in week:
             dt = datetime.strptime(d["date"], "%Y-%m-%d")
-            row_idx = (dt.weekday() + 1) % 7 # 0 is Sunday, 6 is Saturday
-            row_y = grid_start_y + row_idx * (cell_size + gap)
+            row_idx = (dt.weekday() + 1) % 7
+            row_y = grid_start_y + row_idx * col_pitch
 
             level = d.get("level", 0)
             if level < 0: level = 0
             if level > 4: level = 4
             color = LEVEL_COLORS[level]
 
-            # Cell shape: rounded rectangle
+            # Crisp rounded tile
             draw.rounded_rectangle(
                 [col_x, row_y, col_x + cell_size, row_y + cell_size],
-                radius=2.5,
-                fill=color,
-                outline=(255, 255, 255, 12) if level == 0 else None,
-                width=1
+                radius=corner_radius,
+                fill=color
             )
 
-    # Bottom footer info
-    footer_y = height - panel_margin_y - 40
+    # Minimalist Legend at the bottom right
+    legend_y = grid_start_y + 7 * col_pitch + (20 * SCALE)
+    legend_cell_size = 11 * SCALE
+    legend_gap = 3 * SCALE
     
-    # Left stats: total year & today
-    stats_text = f"Total: {total_commits} commits  |  Today: {data.get('today_commits', 0)}"
-    draw.text((48, footer_y), stats_text, font=font_small, fill=TEXT_MUTED)
+    # Position legend right-aligned with the grid
+    legend_total_w = 5 * (legend_cell_size + legend_gap) + (70 * SCALE)
+    legend_start_x = grid_start_x + total_grid_w - legend_total_w
 
-    # Right: Legend (Less [0][1][2][3][4] More)
-    legend_x = width - panel_margin_x - 180
-    draw.text((legend_x - 36, footer_y + 1), "Less", font=font_legend, fill=TEXT_MUTED)
-    
+    draw.text((legend_start_x, legend_y - (1 * SCALE)), "Less", font=font_legend, fill=TEXT_MUTED)
+    squares_start_x = legend_start_x + (32 * SCALE)
+
     for i, c in enumerate(LEVEL_COLORS):
-        cx = legend_x + i * (cell_size + 3)
+        sx = squares_start_x + i * (legend_cell_size + legend_gap)
         draw.rounded_rectangle(
-            [cx, footer_y + 2, cx + cell_size, footer_y + 2 + cell_size],
-            radius=2,
+            [sx, legend_y, sx + legend_cell_size, legend_y + legend_cell_size],
+            radius=2 * SCALE,
             fill=c
         )
-    draw.text((legend_x + 5 * (cell_size + 3) + 4, footer_y + 1), "More", font=font_legend, fill=TEXT_MUTED)
+    draw.text((squares_start_x + 5 * (legend_cell_size + legend_gap) + (6 * SCALE), legend_y - (1 * SCALE)), "More", font=font_legend, fill=TEXT_MUTED)
 
-    # Save to path if requested
+    # Downsample from 2160x720 to 1080x360 using high quality Lanczos filter
+    final_img = img_2x.resize((1080, 360), resample=Image.Resampling.LANCZOS)
+
     if output_path:
-        img.save(output_path, "PNG")
+        final_img.save(output_path, "PNG")
 
-    # Encode to Base64 PNG data URI
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    final_img.save(buf, format="PNG", optimize=True)
     b64_data = base64.b64encode(buf.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{b64_data}"
-
-if __name__ == "__main__":
-    from fetch_github import fetch_contributions
-    contributions = fetch_contributions("weegeeday")
-    data_uri = generate_banner_image(contributions, "preview_card.png")
-    print(f"Banner generated! Length: {len(data_uri)} chars. Saved to preview_card.png")
