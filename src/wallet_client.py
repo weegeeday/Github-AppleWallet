@@ -45,6 +45,14 @@ class WalletWalletClient:
             raise RuntimeError(f"WalletWallet update failed ({resp.status_code}): {resp.text}")
         return resp.json()
 
+    def list_passes(self) -> Dict[str, Any]:
+        """GET /api/passes: list all active passes on the account."""
+        url = f"{API_BASE_URL}/api/passes"
+        resp = requests.get(url, headers=self.headers, timeout=15)
+        if not resp.ok:
+            raise RuntimeError(f"WalletWallet list passes failed ({resp.status_code}): {resp.text}")
+        return resp.json()
+
     def delete_pass(self, serial_number: str) -> Dict[str, Any]:
         """DELETE /api/passes/<serial>"""
         url = f"{API_BASE_URL}/api/passes/{serial_number}"
@@ -52,3 +60,4 @@ class WalletWalletClient:
         if not resp.ok:
             raise RuntimeError(f"WalletWallet delete failed ({resp.status_code}): {resp.text}")
         return resp.json()
+

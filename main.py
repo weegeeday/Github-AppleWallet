@@ -147,6 +147,20 @@ def run():
 
     serial_number = state.get("serialNumber")
 
+    # If no local state but not explicitly force-creating, check if pass already exists on the account
+    if not serial_number and not args.force_create:
+        try:
+            passes_resp = client.list_passes()
+            for p in passes_resp.get("passes", []):
+                if p.get("title") == "GitHub":
+                    serial_number = p.get("serialNumber")
+                    print(f"[*] Found existing pass on account: {serial_number}. Adopting it.")
+                    state["serialNumber"] = serial_number
+                    state["shareUrl"] = f"https://api.walletwallet.dev/p/{serial_number}"
+                    break
+        except Exception as e:
+            print(f"[!] Warning: Could not check existing passes ({e})")
+
     if serial_number and not args.force_create:
         print(f"[*] Updating existing pass (Serial: {serial_number})...")
         res = client.update_pass(serial_number, payload)
