@@ -1,0 +1,12 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local artifacts & debug
+preview_card.png
+*.pkpass
+.venv/
