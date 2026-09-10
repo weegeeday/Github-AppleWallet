@@ -50,12 +50,6 @@ def build_pass_payload(data: Dict[str, Any], banner_data_uri: str) -> Dict[str, 
         "colorPreset": "dark",
         "color": "#0d1117",
         "stripURL": banner_data_uri,
-        "primaryFields": [
-            {
-                "label": "",
-                "value": f"@{username}"
-            }
-        ],
         "headerFields": [
             {
                 "label": "STREAK",
@@ -63,6 +57,10 @@ def build_pass_payload(data: Dict[str, Any], banner_data_uri: str) -> Dict[str, 
             }
         ],
         "secondaryFields": [
+            {
+                "label": "USER",
+                "value": f"@{username}"
+            },
             {
                 "label": "THIS YEAR",
                 "value": str(year_commits)
