@@ -1,6 +1,6 @@
 # GitHub Apple Wallet Pass 📱
 
-Automated daily Apple Wallet pass displaying your real-time GitHub contributions, commit streaks, and a high-resolution dark-mode contribution heatmap banner.
+Automated daily Apple Wallet pass displaying real-time GitHub contributions, commit streaks, and a high-resolution dark-mode contribution heatmap banner.
 
 Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Actions.
 
@@ -8,45 +8,55 @@ Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Act
 
 ---
 
-## 🚀 Live Pass Ready
+## ✨ Features
 
-Your Apple Wallet pass has been created!
+- **Real-Time GitHub Activity:** Automatically counts today's commits, current streak, and year-to-date totals.
+- **Sleek Dark Mode Heatmap:** 20-week tactile contribution grid styled with canonical GitHub greens on a seamless `#0d1117` background.
+- **Silent Background Updates:** Refreshes quietly in Apple Wallet everyday via Apple Push Notification service (APNs).
+- **Zero-Touch Privacy:** Your pass ID and serial numbers are auto-discovered from your private WalletWallet account and never committed to git.
+- **100% Free:** Free WalletWallet tier covers up to 1,000 monthly operations (daily updates only use ~30/month) and GitHub Actions runs free on schedule.
 
-- **Direct Install Page:** [Add to Apple Wallet](https://api.walletwallet.dev/p/883ea5aa-05e0-4968-bb77-aa3a4a6b07fc)
-- **Serial Number:** `883ea5aa-05e0-4968-bb77-aa3a4a6b07fc`
+---
 
-> **How to install on your iPhone:**
-> 1. Open the [Install Page](https://api.walletwallet.dev/p/883ea5aa-05e0-4968-bb77-aa3a4a6b07fc) on your iPhone Safari, OR scan the QR code displayed on the page from your computer screen using your iPhone Camera.
-> 2. Tap **Add to Apple Wallet**.
-> 3. Your card is now active and will update automatically everyday in place!
+## 🚀 Quick Start (Use for Your Account)
+
+### 1. Fork or Clone this Repository
+Fork this repository to your own GitHub account.
+
+### 2. Get a Free WalletWallet API Key
+1. Sign up at [walletwallet.dev](https://www.walletwallet.dev/signup/) (free, no credit card required).
+2. Copy your API key (`ww_live_...`).
+
+### 3. Add GitHub Secret
+In your repository on GitHub:
+1. Go to **Settings** → **Secrets and variables** → **Actions**.
+2. Under **Repository secrets**, click **New repository secret**:
+   - **Name:** `WALLETWALLET_API_KEY`
+   - **Value:** `ww_live_your_key_here`
+3. *(Optional)* If your GitHub repository owner differs from your GitHub username, add a Repository Variable:
+   - **Name:** `GH_USERNAME`
+   - **Value:** `your-github-username`
+   *(By default, it automatically uses your GitHub repository owner).*
+
+### 4. Generate Your Pass
+1. Go to the **Actions** tab in your repository.
+2. Select the **Daily Apple Wallet Pass Update** workflow.
+3. Click **Run workflow** → **Run workflow**.
+4. Once completed (~15 seconds), open the run to view the **Job Summary**.
+5. Click **Add to Apple Wallet** or scan the QR code with your iPhone to install your card!
 
 ---
 
 ## ⚙️ How It Works
 
-1. **Scheduled Daily Trigger**: Every day at 01:00 AM local time (05:00 UTC), GitHub Actions runs [`main.py`](main.py).
-2. **Scrapes Public Contributions**: Fetches your public GitHub contribution calendar (no tokens or authentication required).
-3. **Renders Heatmap**: Generates a crisp 1080x360 px GitHub dark-mode contribution grid using Pillow.
-4. **Pushes Live APNs Update**: Calls WalletWallet's `PUT /api/passes/<serial>` endpoint. WalletWallet sends an Apple Push Notification (APNs) wake signal to your iPhone, refreshing the card silently in your Apple Wallet.
+1. **Daily Scheduler:** Every night at 01:00 AM local time (05:00 UTC), GitHub Actions runs [`main.py`](main.py).
+2. **Public Contribution Scraping:** Fetches your public GitHub contribution calendar (no Personal Access Token required).
+3. **Heatmap Generation:** Uses Pillow to render a 1080×360 px retina banner with 2x supersampling and safe margins.
+4. **Auto-Discovery & APNs Update:** Detects your existing card on WalletWallet and pushes an in-place silent update via `PUT /api/passes/<serial>`.
 
 ---
 
-## 🛠️ GitHub Repository Setup
-
-When pushing this repository to GitHub:
-
-1. Go to your repository **Settings** → **Secrets and variables** → **Actions**.
-2. Under **Repository secrets**, add:
-   - `WALLETWALLET_API_KEY`: Your WalletWallet secret key (`ww_live_...`)
-3. Under **Variables** (or Secrets), add:
-   - `GH_USERNAME`: Your GitHub handle (e.g. `weegeeday`)
-4. Make sure GitHub Actions has write access to commit state:
-   - Go to **Settings** → **Actions** → **General** → **Workflow permissions**.
-   - Select **Read and write permissions** and click **Save**.
-
----
-
-## 💻 Local Usage
+## 💻 Local Development
 
 To run or test locally:
 
@@ -54,16 +64,13 @@ To run or test locally:
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Configure .env
-echo "WALLETWALLET_API_KEY=your_key_here" >> .env
+# 2. Configure environment
+echo "WALLETWALLET_API_KEY=ww_live_your_key" > .env
 echo "GH_USERNAME=your_username" >> .env
 
 # 3. Preview banner image without contacting API
 python main.py --preview-only
 
-# 4. Trigger pass update
+# 4. Create or update pass
 python main.py
-
-# 5. Force recreate pass with a new serial
-python main.py --force-create
 ```

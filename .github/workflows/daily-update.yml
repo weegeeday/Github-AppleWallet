@@ -2,7 +2,7 @@ name: Daily Apple Wallet Pass Update
 
 on:
   schedule:
-    # Runs daily at 05:00 UTC (01:00 AM EDT)
+    # Runs daily at 05:00 UTC (01:00 AM EDT) and 17:00 UTC (01:00 PM EDT)
     - cron: '0 5 * * *'
     - cron: '0 17 * * *'
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   update-pass:
@@ -38,31 +38,10 @@ jobs:
       - name: Run pass updater
         env:
           WALLETWALLET_API_KEY: ${{ secrets.WALLETWALLET_API_KEY }}
-          GH_USERNAME: ${{ vars.GH_USERNAME || secrets.GH_USERNAME || 'weegeeday' }}
+          GH_USERNAME: ${{ vars.GH_USERNAME || secrets.GH_USERNAME || github.repository_owner }}
         run: |
           CMD_ARGS=""
           if [ "${{ inputs.force_create }}" = "true" ]; then
             CMD_ARGS="--force-create"
           fi
           python main.py $CMD_ARGS
-
-      - name: Publish Job Summary
-        if: always()
-        run: |
-          if [ -f pass_state.json ]; then
-            SERIAL=$(python -c "import json; print(json.load(open('pass_state.json')).get('serialNumber', ''))")
-            SHARE_URL=$(python -c "import json; print(json.load(open('pass_state.json')).get('shareUrl', ''))")
-            echo "### 📱 GitHub Apple Wallet Pass" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "- **Serial:** \`$SERIAL\`" >> $GITHUB_STEP_SUMMARY
-            echo "- **Install Link:** [Add to Apple Wallet]($SHARE_URL)" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Scan the QR code or tap the link on your iPhone to install or view your pass." >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Commit updated pass state
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add pass_state.json
-          git diff --staged --quiet || (git commit -m "chore: update pass state [skip ci]" && git push)

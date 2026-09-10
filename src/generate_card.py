@@ -244,6 +244,7 @@ def generate_banner_image(data: Dict[str, Any], output_path: str = None) -> str:
 
 if __name__ == "__main__":
     from fetch_github import fetch_contributions
-    data = fetch_contributions("weegeeday")
+    user = os.environ.get("GH_USERNAME", "octocat")
+    data = fetch_contributions(user)
     uri = generate_banner_image(data, "preview_card.png")
-    print(f"Generated safe-margin banner! Saved to preview_card.png ({len(uri)} chars)")
+    print(f"Generated safe-margin banner for @{user}! Saved to preview_card.png ({len(uri)} chars)")

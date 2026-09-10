@@ -101,6 +101,7 @@ def run():
     parser.add_argument("--force-create", action="store_true", help="Force creating a brand new pass instead of updating")
     parser.add_argument("--preview-only", action="store_true", help="Only generate preview_card.png banner image without contacting API")
     parser.add_argument("--username", help="Override GitHub username")
+    parser.add_argument("--serial", help="Explicitly specify pass serial number to update")
     args = parser.parse_args()
 
     load_env_file()
@@ -134,41 +135,63 @@ def run():
     client = WalletWalletClient(api_key)
     payload = build_pass_payload(contrib_data, banner_uri)
 
-    # Check state file
+    # 1. Check if serial passed explicitly via argument or env
+    serial_number = args.serial or os.environ.get("WALLET_PASS_SERIAL")
+
+    # 2. Check local state file (if available locally)
     state = {}
-    if os.path.exists(STATE_FILE) and not args.force_create:
+    if not serial_number and os.path.exists(STATE_FILE) and not args.force_create:
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
                 state = json.load(f)
+                serial_number = state.get("serialNumber")
         except Exception:
             state = {}
 
-    serial_number = state.get("serialNumber")
-
-    # If no local state but not explicitly force-creating, check if pass already exists on the account
+    # 3. If still unknown and not force-creating, auto-discover pass on WalletWallet account
     if not serial_number and not args.force_create:
         try:
             passes_resp = client.list_passes()
             for p in passes_resp.get("passes", []):
                 if p.get("title") == "GitHub":
                     serial_number = p.get("serialNumber")
-                    print(f"[*] Found existing pass on account: {serial_number}. Adopting it.")
+                    masked = serial_number[:8] + "..." + serial_number[-4:] if len(serial_number) > 12 else serial_number
+                    print(f"[*] Discovered existing GitHub pass on account ({masked}). Adopting it.")
                     state["serialNumber"] = serial_number
                     state["shareUrl"] = f"https://api.walletwallet.dev/p/{serial_number}"
                     break
         except Exception as e:
             print(f"[!] Warning: Could not check existing passes ({e})")
 
+    step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+
     if serial_number and not args.force_create:
-        print(f"[*] Updating existing pass (Serial: {serial_number})...")
+        masked = serial_number[:8] + "..." + serial_number[-4:] if len(serial_number) > 12 else serial_number
+        print(f"[*] Updating existing pass (Serial: {masked})...")
         res = client.update_pass(serial_number, payload)
         unchanged = res.get("unchanged", False)
         devices = res.get("notifiedDevices", 0)
         print(f"    [+] Update successful! (Unchanged: {unchanged}, Devices notified: {devices})")
+
+        share_url = state.get("shareUrl", f"https://api.walletwallet.dev/p/{serial_number}")
         
-        state["lastUpdated"] = datetime.now(timezone.utc).isoformat()
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2)
+        # Save local state if not in CI
+        if not os.environ.get("CI"):
+            state["serialNumber"] = serial_number
+            state["lastUpdated"] = datetime.now(timezone.utc).isoformat()
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+
+        if step_summary:
+            try:
+                with open(step_summary, "a", encoding="utf-8") as f:
+                    f.write("### 📱 GitHub Apple Wallet Pass\n\n")
+                    f.write(f"- **User:** \`@{username}\`\n")
+                    f.write(f"- **Status:** ✅ Pass updated successfully\n")
+                    f.write(f"- **Devices Notified:** {devices}\n")
+                    f.write(f"- **Install / View:** [Open in Wallet]({share_url})\n")
+            except Exception:
+                pass
     else:
         print("[*] Creating new Apple Wallet pass...")
         res = client.create_pass(payload)
@@ -176,34 +199,43 @@ def run():
         share_url = res.get("shareUrl")
         google_url = res.get("googleSaveUrl")
 
-        # Save state immediately
-        state = {
-            "serialNumber": new_serial,
-            "username": username,
-            "shareUrl": share_url,
-            "googleSaveUrl": google_url,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-            "lastUpdated": datetime.now(timezone.utc).isoformat()
-        }
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2)
+        # Save local state if not in CI
+        if not os.environ.get("CI"):
+            state = {
+                "serialNumber": new_serial,
+                "username": username,
+                "shareUrl": share_url,
+                "googleSaveUrl": google_url,
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+                "lastUpdated": datetime.now(timezone.utc).isoformat()
+            }
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
 
         # Save pkpass binary locally if available
         apple_pass_b64 = res.get("applePass")
-        if apple_pass_b64:
+        if apple_pass_b64 and not os.environ.get("CI"):
             import base64
             with open("github_contributions.pkpass", "wb") as f:
                 f.write(base64.b64decode(apple_pass_b64))
 
         print("\n" + "="*60)
         print("[SUCCESS] Pass created successfully!")
-        print(f"Serial Number: {new_serial}")
         print(f"Install Page:  {share_url}")
         print("="*60 + "\n")
         print("Open the install page on your iPhone to add the pass to Apple Wallet:")
         print(f"   {share_url}\n")
-        if apple_pass_b64:
-            print("Saved local binary: github_contributions.pkpass\n")
+
+        if step_summary:
+            try:
+                with open(step_summary, "a", encoding="utf-8") as f:
+                    f.write("### 📱 GitHub Apple Wallet Pass\n\n")
+                    f.write(f"- **User:** \`@{username}\`\n")
+                    f.write(f"- **Status:** 🎉 Pass created successfully!\n")
+                    f.write(f"- **Install Link:** [Add to Apple Wallet]({share_url})\n\n")
+                    f.write("Open the link or scan the QR code on the page from your iPhone to add the pass.\n")
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):

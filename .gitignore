@@ -1,5 +1,6 @@
-# Secrets
+# Secrets & State
 .env
+pass_state.json
 
 # Python
 __pycache__/

@@ -131,8 +131,8 @@ def fetch_contributions(username: str) -> Dict[str, Any]:
     }
 
 if __name__ == "__main__":
-    import sys
-    user = sys.argv[1] if len(sys.argv) > 1 else "weegeeday"
+    import sys, os
+    user = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("GH_USERNAME", "octocat")
     data = fetch_contributions(user)
     print(f"User: {data['username']}")
     print(f"Total last year: {data['total_last_year']}")
