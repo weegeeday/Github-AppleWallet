@@ -186,7 +186,7 @@ def run():
             try:
                 with open(step_summary, "a", encoding="utf-8") as f:
                     f.write("### 📱 GitHub Apple Wallet Pass\n\n")
-                    f.write(f"- **User:** \`@{username}\`\n")
+                    f.write(f"- **User:** `@{username}`\n")
                     f.write(f"- **Status:** ✅ Pass updated successfully\n")
                     f.write(f"- **Devices Notified:** {devices}\n")
                     f.write(f"- **Install / View:** [Open in Wallet]({share_url})\n")
@@ -230,7 +230,7 @@ def run():
             try:
                 with open(step_summary, "a", encoding="utf-8") as f:
                     f.write("### 📱 GitHub Apple Wallet Pass\n\n")
-                    f.write(f"- **User:** \`@{username}\`\n")
+                    f.write(f"- **User:** `@{username}`\n")
                     f.write(f"- **Status:** 🎉 Pass created successfully!\n")
                     f.write(f"- **Install Link:** [Add to Apple Wallet]({share_url})\n\n")
                     f.write("Open the link or scan the QR code on the page from your iPhone to add the pass.\n")
