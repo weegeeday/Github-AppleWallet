@@ -1,10 +1,6 @@
 name: Daily Apple Wallet Pass Update
 
 on:
-  schedule:
-    # Runs daily at 05:00 UTC (01:00 AM EDT) and 17:00 UTC (01:00 PM EDT)
-    - cron: '0 5 * * *'
-    - cron: '0 17 * * *'
   workflow_dispatch:
     inputs:
       force_create:
