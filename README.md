@@ -1,6 +1,6 @@
 # GitHub Apple Wallet Pass 📱
 
-Automated daily Apple Wallet pass displaying real-time GitHub contributions, commit streaks, and a high-resolution dark-mode contribution heatmap banner.
+Automated Apple Wallet pass displaying real-time GitHub contributions, commit streaks, and a high-resolution dark-mode contribution heatmap banner.
 
 Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Actions.
 
@@ -14,7 +14,7 @@ Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Act
 - **Sleek Dark Mode Heatmap:** 20-week tactile contribution grid styled with canonical GitHub greens on a seamless `#0d1117` background.
 - **Silent Background Updates:** Refreshes quietly in Apple Wallet everyday via Apple Push Notification service (APNs).
 - **Zero-Touch Privacy:** Your pass ID and serial numbers are auto-discovered from your private WalletWallet account and never committed to git.
-- **100% Free:** Free WalletWallet tier covers up to 1,000 monthly operations (daily updates only use ~30/month) and GitHub Actions runs free on schedule.
+- **100% Free:** Free WalletWallet tier covers up to 1,000 monthly operations and GitHub Actions runs free.
 
 ---
 
@@ -49,7 +49,7 @@ In your repository on GitHub:
 
 ## ⚙️ How It Works
 
-1. **Daily Scheduler:** Every night at 01:00 AM local time (05:00 UTC), GitHub Actions runs [`main.py`](main.py).
+1. **Workflow Run:** Running the GitHub Actions workflow executes [`main.py`](main.py).
 2. **Public Contribution Scraping:** Fetches your public GitHub contribution calendar (no Personal Access Token required).
 3. **Heatmap Generation:** Uses Pillow to render a 1080×360 px retina banner with 2x supersampling and safe margins.
 4. **Auto-Discovery & APNs Update:** Detects your existing card on WalletWallet and pushes an in-place silent update via `PUT /api/passes/<serial>`.
