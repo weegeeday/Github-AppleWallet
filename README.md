@@ -2,7 +2,7 @@
 
 Automated Apple Wallet pass displaying real-time GitHub contributions, commit streaks, and a high-resolution dark-mode contribution heatmap banner.
 
-Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Actions.
+Powered by [WalletWallet](https://www.walletwallet.dev) and GitHub Actions.
 
 ![Banner Preview](preview_card.png)
 
@@ -14,7 +14,6 @@ Powered 100% free by [WalletWallet](https://www.walletwallet.dev) and GitHub Act
 - **Sleek Dark Mode Heatmap:** 20-week tactile contribution grid styled with canonical GitHub greens on a seamless `#0d1117` background.
 - **Silent Background Updates:** Refreshes quietly in Apple Wallet everyday via Apple Push Notification service (APNs).
 - **Zero-Touch Privacy:** Your pass ID and serial numbers are auto-discovered from your private WalletWallet account and never committed to git.
-- **100% Free:** Free WalletWallet tier covers up to 1,000 monthly operations and GitHub Actions runs free.
 
 ---
 
